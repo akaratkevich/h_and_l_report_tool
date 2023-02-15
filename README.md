@@ -7,3 +7,6 @@ A quick summary of what the tool does:
 -	Calculates back 7 days from the ‘report’ date to create dates to filter the output
 -	Filters further on the status Completed/Cancelled
 -	Prints out the results to the screen
+
+Caveats:
+- The file path, for the downloaded excel file statically defined
