@@ -54,9 +54,9 @@ func main() {
 	fmt.Println("\t\t\t## Today's Date:", now.Local().Day(), now.Local().Month(), now.Local().Year(), "##")
 	//subtract 7 days from today
 	t1 := t0.AddDate(0, 0, -7)
-	println("\t\t\t-- H&L Report First Date:", t1.Day(), "/", t1.Month(), "/", t1.Year(), "--")
+	println("\t\t\t-- H&L Report FROM:", t1.Day(), "/", t1.Month(), "/", t1.Year(), "--")
 	t2 := t1.AddDate(0, 0, 7)
-	println("\t\t\t-- H&L Report Last Date:", t2.Day(), "/", t2.Month(), "/", t2.Year(), "--")
+	println("\t\t\t-- H&L Report TO:", t2.Day(), "/", t2.Month(), "/", t2.Year(), "--")
 
 	// Create a date filter between two dates
 	var dateFilters []string
@@ -70,6 +70,7 @@ func main() {
 		statusCompleted = "completed"
 		statusCancelled = "cancelled"
 		excelFile       = "D:\\workstack_live.xlsx"
+		reportFile      = "D:\\workstack_report.xlsx"
 	)
 
 	// Read Excel data
@@ -77,6 +78,15 @@ func main() {
 	if err != nil {
 		fmt.Println("Error reading Excel file:", err)
 		return
+	}
+
+	// Create a new Excel file
+	file := xlsx.NewFile()
+
+	// Create a new sheet in the file
+	sheet, err := file.AddSheet("weekly_report")
+	if err != nil {
+		panic(err)
 	}
 
 	// Filter data and create table
@@ -87,19 +97,35 @@ func main() {
 	for _, record := range records {
 		if (record.Status == statusCompleted || record.Status == statusCancelled) &&
 			contains(dateFilters, record.StartDate) {
-			var coloredStatus string
-			if record.Status == statusCompleted {
-				coloredStatus = colorGreen + record.Status + colorReset
-			} else {
-				coloredStatus = colorRed + record.Status + colorReset
-			}
-			table.Append([]string{record.ProjectName, record.CRQ, record.Task, record.StartDate, coloredStatus, record.Comments})
+			table.Append([]string{record.ProjectName, record.CRQ, record.Task, record.StartDate, record.Status, record.Comments})
 			countRows++
+
+		}
+	}
+
+	// Write header to the Excel sheet
+	header := []string{"ProjectName", "CRQ", "Task", "StartDate", "Status", "Comments"}
+	excelHeader := sheet.AddRow()
+	excelHeader.WriteSlice(&header, -1)
+
+	// Write the filtered data to the Excel sheet
+	for _, record := range records {
+		if (record.Status == statusCompleted || record.Status == statusCancelled) &&
+			contains(dateFilters, record.StartDate) {
+			excelRow := sheet.AddRow()
+			excelRow.WriteSlice(&[]string{record.ProjectName, record.CRQ, record.Task, record.StartDate, record.Status, record.Comments}, -1)
 		}
 	}
 	countCompletedConv := strconv.Itoa(countRows)
 	table.SetFooter([]string{"", "", "", "", "Total", countCompletedConv})
 	table.Render()
+
+	// Save the Excel file
+	fmt.Println("Saving report to:", reportFile)
+	err = file.Save(reportFile)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Press Enter to continue...")
 	fmt.Scanln() // Pauses the screen
@@ -167,10 +193,3 @@ func contains(slice []string, str string) bool {
 	}
 	return false
 }
-
-// Constants for colored output
-const (
-	colorReset = "\033[0m"
-	colorGreen = "\033[0;32m"
-	colorRed   = "\033[0;31m"
-)
